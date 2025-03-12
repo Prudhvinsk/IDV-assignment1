@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Singapore PSI Data</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        header {
+            text-align: center;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: black;
+            border-radius: 10px 10px 0 0;
+        }       
+        header img {
+            width: 150px;
+            display: block;
+            margin: 0 auto 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+        tr:hover {
+            background-color: #d0f0f0;
+        }
+        th {
+            background-color: #008080;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .bold {
+            font-weight: bold;
+        }
+        footer {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f4f4f4;
+            color: rgb(0, 0, 0);
+            border-radius: 0 0 10px 10px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="https://www.sutd.edu.sg/wp-content/uploads/2024/10/SUTDLogo_Dark@2x.png" alt="SUTD Logo">
+        <h2>Singapore PSI Data</h2>
+    </header>
+    <div class="container">
+        <p>A real-time air quality data visualization for Singapore.</p>
+        <label for="dateSelect">Select Date: </label>
+        <input type="date" id="dateSelect" onchange="fetchPSIData()">
+        <p id="lastUpdated"></p>
+        <table id="psiTable">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Central</th>
+                    <th>East</th>
+                    <th>West</th>
+                    <th>North</th>
+                    <th>South</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <p><strong>PSI Ranges:</strong> 0-50 (Good), 51-100 (Moderate), 101-200 (Unhealthy), 201-300 (Very Unhealthy), 301+ (Hazardous)</p>
+        <p>Retrieved from <a href="https://data.gov.sg" target="_blank">data.gov.sg</a> website.</p>
+    </div>
+    <footer>
+        <p>Ravi Prudhvi Naga Sai Kumar - 1009460</p>
+    </footer>
+    <script>
+        async function fetchPSIData() {
+            try {
+                const dateInput = document.getElementById('dateSelect').value;
+                const now = new Date();
+                const date = dateInput ? new Date(dateInput).toISOString().split('T')[0] : now.toISOString().split('T')[0];
+                
+                const response = await fetch(`https://api.data.gov.sg/v1/environment/psi?date=${date}`);
+                const data = await response.json();
+
+                if (!data.items.length) {
+                    document.getElementById('lastUpdated').innerText = 'No data available for the selected date.';
+                    document.querySelector('#psiTable tbody').innerHTML = '';
+                    return;
+                }
+                
+                const latestEntry = data.items[data.items.length - 1];
+                const readings = latestEntry.readings;
+                const tableBody = document.querySelector('#psiTable tbody');
+                tableBody.innerHTML = '';
+                
+                const order = [
+                    "psi_twenty_four_hourly",
+                    "pm10_sub_index",
+                    "pm10_twenty_four_hourly",
+                    "pm25_sub_index",
+                    "pm25_twenty_four_hourly",
+                    "so2_sub_index",
+                    "so2_twenty_four_hourly",
+                    "o3_sub_index",
+                    "o3_eight_hour_max",
+                    "co_sub_index",
+                    "co_eight_hour_max",
+                    "no2_one_hour_max"
+                ];
+                
+                order.forEach(metric => {
+                    if (readings[metric]) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td${metric === "psi_twenty_four_hourly" ? ' class="bold"' : ''}>${metric.replace(/_/g, ' ')}</td>
+                            <td${metric === "psi_twenty_four_hourly" ? ' class="bold"' : ''}>${readings[metric].central || '-'}</td>
+                            <td${metric === "psi_twenty_four_hourly" ? ' class="bold"' : ''}>${readings[metric].east || '-'}</td>
+                            <td${metric === "psi_twenty_four_hourly" ? ' class="bold"' : ''}>${readings[metric].west || '-'}</td>
+                            <td${metric === "psi_twenty_four_hourly" ? ' class="bold"' : ''}>${readings[metric].north || '-'}</td>
+                            <td${metric === "psi_twenty_four_hourly" ? ' class="bold"' : ''}>${readings[metric].south || '-'}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    }
+                });
+                
+                document.getElementById('lastUpdated').innerText = `Last Updated: ${new Date(latestEntry.timestamp).toLocaleString()}`;
+            } catch (error) {
+                console.error('Error fetching PSI data:', error);
+                document.getElementById('lastUpdated').innerText = 'Failed to fetch data. Try again later.';
+            }
+        }
+        fetchPSIData();
+    </script>
+</body>
+</html>
